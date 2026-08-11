@@ -36,15 +36,18 @@ export class StockMovementsService {
       throw new NotFoundException('Product not found');
     }
 
+    if (
+      dto.movementType === MovementType.OUT &&
+      product.currentStock < dto.quantity
+    ) {
+      throw new BadRequestException(
+        `Insufficient stock for ${product.productName}. Available: ${product.currentStock}, requested: ${dto.quantity}`,
+      );
+    }
+
     if (dto.movementType === MovementType.IN) {
       product.currentStock += dto.quantity;
     } else {
-      if (product.currentStock < dto.quantity) {
-        throw new BadRequestException(
-          `Insufficient stock for ${product.productName}. Available: ${product.currentStock}, requested: ${dto.quantity}`,
-        );
-      }
-
       product.currentStock -= dto.quantity;
     }
 
@@ -56,10 +59,6 @@ export class StockMovementsService {
   }
 
   findAll() {
-    return this.stockRepository.find({
-      order: {
-        timestamp: 'DESC',
-      },
-    });
+    return this.stockRepository.find();
   }
 }

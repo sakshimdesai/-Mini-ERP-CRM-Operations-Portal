@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsInt,
   IsNumber,
   IsPositive,
   IsString,
@@ -8,7 +9,8 @@ import {
 import { MovementType } from '../stock-movements.entity';
 
 export class CreateStockMovementDto {
-  @IsNumber()
+  @IsInt()
+  @IsPositive()
   productId!: number;
 
   @IsNumber()
