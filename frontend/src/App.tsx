@@ -1,14 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Login from './pages/Login';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
 import Inventory from './pages/Inventory';
 import Challans from './pages/Challans';
+import { apiRequest } from './services/api';
 import './index.css';
 
 interface User {
   username: string;
   role: string;
+}
+
+interface Customer {
+  id: number;
+}
+
+interface Product {
+  id: number;
+  currentStock: number;
+}
+
+interface Challan {
+  id: number;
+}
+
+interface DashboardStats {
+  customers: number;
+  products: number;
+  inventory: number;
+  challans: number;
 }
 
 type ActivePage =
@@ -36,6 +57,66 @@ function App() {
   const [activePage, setActivePage] =
     useState<ActivePage>('dashboard');
 
+  const [dashboardStats, setDashboardStats] =
+    useState<DashboardStats>({
+      customers: 0,
+      products: 0,
+      inventory: 0,
+      challans: 0,
+    });
+
+  const [dashboardLoading, setDashboardLoading] =
+    useState(false);
+
+  const [dashboardError, setDashboardError] =
+    useState('');
+
+  useEffect(() => {
+    if (!user || activePage !== 'dashboard') {
+      return;
+    }
+
+    async function loadDashboardStats() {
+      setDashboardLoading(true);
+      setDashboardError('');
+
+      try {
+        const [
+          customers,
+          products,
+          challans,
+        ] = await Promise.all([
+          apiRequest<Customer[]>('/customers'),
+          apiRequest<Product[]>('/products'),
+          apiRequest<Challan[]>('/challans'),
+        ]);
+
+        const totalInventory = products.reduce(
+          (total, product) =>
+            total + Number(product.currentStock || 0),
+          0,
+        );
+
+        setDashboardStats({
+          customers: customers.length,
+          products: products.length,
+          inventory: totalInventory,
+          challans: challans.length,
+        });
+      } catch (error) {
+        setDashboardError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to load dashboard data.',
+        );
+      } finally {
+        setDashboardLoading(false);
+      }
+    }
+
+    loadDashboardStats();
+  }, [user, activePage]);
+
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -48,98 +129,23 @@ function App() {
     return <Login onLogin={setUser} />;
   }
 
-  /*
-   * TypeScript does not preserve the null check for `user`
-   * inside the nested renderPage function.
-   *
-   * Since we already returned above when user is null,
-   * currentUser is guaranteed to be a valid User here.
-   */
   const currentUser = user;
 
   function renderPage() {
     if (activePage === 'customers') {
-      return (
-        <>
-          <header className="topbar">
-            <div>
-              <h1>Customers</h1>
-              <p>
-                Manage your customer relationships
-              </p>
-            </div>
-
-            <div className="role-badge">
-              {currentUser.role}
-            </div>
-          </header>
-
-          <Customers />
-        </>
-      );
+      return <Customers />;
     }
 
     if (activePage === 'products') {
-      return (
-        <>
-          <header className="topbar">
-            <div>
-              <h1>Products</h1>
-              <p>
-                Manage your product catalogue
-              </p>
-            </div>
-
-            <div className="role-badge">
-              {currentUser.role}
-            </div>
-          </header>
-
-          <Products />
-        </>
-      );
+      return <Products />;
     }
 
     if (activePage === 'inventory') {
-      return (
-        <>
-          <header className="topbar">
-            <div>
-              <h1>Inventory</h1>
-              <p>
-                Monitor stock levels and movements
-              </p>
-            </div>
-
-            <div className="role-badge">
-              {currentUser.role}
-            </div>
-          </header>
-
-          <Inventory />
-        </>
-      );
+      return <Inventory />;
     }
 
     if (activePage === 'challans') {
-      return (
-        <>
-          <header className="topbar">
-            <div>
-              <h1>Sales Challans</h1>
-              <p>
-                Create and manage sales challans
-              </p>
-            </div>
-
-            <div className="role-badge">
-              {currentUser.role}
-            </div>
-          </header>
-
-          <Challans />
-        </>
-      );
+      return <Challans />;
     }
 
     return (
@@ -147,9 +153,7 @@ function App() {
         <header className="topbar">
           <div>
             <h1>Dashboard</h1>
-            <p>
-              Overview of your ERP operations
-            </p>
+            <p>Overview of your ERP operations</p>
           </div>
 
           <div className="role-badge">
@@ -157,28 +161,58 @@ function App() {
           </div>
         </header>
 
+        {dashboardError && (
+          <div className="error-message">
+            {dashboardError}
+          </div>
+        )}
+
         <section className="dashboard-grid">
           <div className="stat-card">
             <span>Customers</span>
-            <strong>—</strong>
+
+            <strong>
+              {dashboardLoading
+                ? '...'
+                : dashboardStats.customers}
+            </strong>
+
             <small>Customer CRM</small>
           </div>
 
           <div className="stat-card">
             <span>Products</span>
-            <strong>—</strong>
+
+            <strong>
+              {dashboardLoading
+                ? '...'
+                : dashboardStats.products}
+            </strong>
+
             <small>Product catalogue</small>
           </div>
 
           <div className="stat-card">
             <span>Inventory</span>
-            <strong>—</strong>
-            <small>Current stock</small>
+
+            <strong>
+              {dashboardLoading
+                ? '...'
+                : dashboardStats.inventory}
+            </strong>
+
+            <small>Total current stock</small>
           </div>
 
           <div className="stat-card">
             <span>Challans</span>
-            <strong>—</strong>
+
+            <strong>
+              {dashboardLoading
+                ? '...'
+                : dashboardStats.challans}
+            </strong>
+
             <small>Sales challans</small>
           </div>
         </section>
