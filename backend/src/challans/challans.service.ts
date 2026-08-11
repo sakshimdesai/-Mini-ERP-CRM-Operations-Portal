@@ -3,8 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+
+import {
+  DataSource,
+  Repository,
+} from 'typeorm';
 
 import {
   Challan,
@@ -13,6 +18,11 @@ import {
 
 import { Customer } from '../customers/customer.entity';
 import { Product } from '../products/products.entity';
+
+import {
+  StockMovement,
+  MovementType,
+} from '../stock-movements/stock-movements.entity';
 
 import {
   CreateChallanDto,
@@ -34,28 +44,36 @@ export class ChallansService {
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
 
+    @InjectRepository(StockMovement)
+    private readonly stockMovementRepository: Repository<StockMovement>,
+
     private readonly dataSource: DataSource,
   ) {}
 
   async create(createChallanDto: CreateChallanDto) {
-    const customer = await this.customerRepository.findOne({
-      where: {
-        id: createChallanDto.customerId,
-      },
-    });
+    const customer =
+      await this.customerRepository.findOne({
+        where: {
+          id: createChallanDto.customerId,
+        },
+      });
 
     if (!customer) {
-      throw new NotFoundException('Customer not found');
+      throw new NotFoundException(
+        'Customer not found',
+      );
     }
 
     /*
-     * Combine duplicate product IDs if the same product
-     * accidentally appears more than once in the request.
+     * Combine duplicate product IDs if the same
+     * product accidentally appears more than once.
      */
     const quantities = new Map<number, number>();
 
     for (const item of createChallanDto.products) {
-      const existing = quantities.get(item.productId) ?? 0;
+      const existing =
+        quantities.get(item.productId) ?? 0;
+
       quantities.set(
         item.productId,
         existing + item.quantity,
@@ -75,11 +93,12 @@ export class ChallansService {
     let totalQuantity = 0;
 
     for (const [productId, quantity] of quantities) {
-      const product = await this.productRepository.findOne({
-        where: {
-          id: productId,
-        },
-      });
+      const product =
+        await this.productRepository.findOne({
+          where: {
+            id: productId,
+          },
+        });
 
       if (!product) {
         throw new NotFoundException(
@@ -100,27 +119,30 @@ export class ChallansService {
       totalQuantity += quantity;
     }
 
-    const challan = this.challanRepository.create({
-      challanNumber: this.generateChallanNumber(),
-      customerId: customer.id,
+    const challan =
+      this.challanRepository.create({
+        challanNumber:
+          this.generateChallanNumber(),
 
-      customerSnapshot: {
-        customerName: customer.customerName,
-        mobileNumber: customer.mobileNumber,
-        email: customer.email,
-        businessName: customer.businessName,
-        gstNumber: customer.gstNumber,
-        address: customer.address,
-      },
+        customerId: customer.id,
 
-      products: productSnapshots,
+        customerSnapshot: {
+          customerName: customer.customerName,
+          mobileNumber: customer.mobileNumber,
+          email: customer.email,
+          businessName: customer.businessName,
+          gstNumber: customer.gstNumber,
+          address: customer.address,
+        },
 
-      totalQuantity,
+        products: productSnapshots,
 
-      status: ChallanStatus.DRAFT,
+        totalQuantity,
 
-      createdBy: createChallanDto.createdBy,
-    });
+        status: ChallanStatus.DRAFT,
+
+        createdBy: createChallanDto.createdBy,
+      });
 
     return this.challanRepository.save(challan);
   }
@@ -134,14 +156,17 @@ export class ChallansService {
   }
 
   async findOne(id: number) {
-    const challan = await this.challanRepository.findOne({
-      where: {
-        id,
-      },
-    });
+    const challan =
+      await this.challanRepository.findOne({
+        where: {
+          id,
+        },
+      });
 
     if (!challan) {
-      throw new NotFoundException('Challan not found');
+      throw new NotFoundException(
+        'Challan not found',
+      );
     }
 
     return challan;
@@ -151,32 +176,53 @@ export class ChallansService {
     id: number,
     dto: UpdateChallanStatusDto,
   ) {
-    const challan = await this.findOne(id);
+    const challan =
+      await this.findOne(id);
 
-    if (challan.status === ChallanStatus.CANCELLED) {
+    if (
+      challan.status ===
+      ChallanStatus.CANCELLED
+    ) {
       throw new BadRequestException(
         'Cancelled challan cannot be modified',
       );
     }
 
-    if (challan.status === ChallanStatus.CONFIRMED) {
+    if (
+      challan.status ===
+      ChallanStatus.CONFIRMED
+    ) {
       throw new BadRequestException(
         'Confirmed challan cannot be modified',
       );
     }
 
-    if (dto.status === ChallanStatus.DRAFT) {
+    if (
+      dto.status ===
+      ChallanStatus.DRAFT
+    ) {
       return challan;
     }
 
-    if (dto.status === ChallanStatus.CANCELLED) {
-      challan.status = ChallanStatus.CANCELLED;
+    if (
+      dto.status ===
+      ChallanStatus.CANCELLED
+    ) {
+      challan.status =
+        ChallanStatus.CANCELLED;
 
-      return this.challanRepository.save(challan);
+      return this.challanRepository.save(
+        challan,
+      );
     }
 
-    if (dto.status === ChallanStatus.CONFIRMED) {
-      return this.confirmChallan(challan.id);
+    if (
+      dto.status ===
+      ChallanStatus.CONFIRMED
+    ) {
+      return this.confirmChallan(
+        challan.id,
+      );
     }
 
     throw new BadRequestException(
@@ -184,7 +230,9 @@ export class ChallansService {
     );
   }
 
-  private async confirmChallan(challanId: number) {
+  private async confirmChallan(
+    challanId: number,
+  ) {
     return this.dataSource.transaction(
       async (manager) => {
         const challanRepository =
@@ -193,38 +241,50 @@ export class ChallansService {
         const productRepository =
           manager.getRepository(Product);
 
-        const challan = await challanRepository.findOne({
-          where: {
-            id: challanId,
-          },
-        });
+        const stockMovementRepository =
+          manager.getRepository(
+            StockMovement,
+          );
+
+        const challan =
+          await challanRepository.findOne({
+            where: {
+              id: challanId,
+            },
+          });
 
         if (!challan) {
-          throw new NotFoundException('Challan not found');
+          throw new NotFoundException(
+            'Challan not found',
+          );
         }
 
-        if (challan.status !== ChallanStatus.DRAFT) {
+        if (
+          challan.status !==
+          ChallanStatus.DRAFT
+        ) {
           throw new BadRequestException(
             'Only Draft challans can be confirmed',
           );
         }
 
         /*
-         * Check every product while holding a database lock.
-         * This prevents concurrent confirmations from causing
-         * the stock to become negative.
+         * First verify ALL products have
+         * sufficient stock.
          */
-        const productsToUpdate: Product[] = [];
+        const productsToUpdate: Product[] =
+          [];
 
         for (const item of challan.products) {
-          const product = await productRepository.findOne({
-            where: {
-              id: item.productId,
-            },
-            lock: {
-              mode: 'pessimistic_write',
-            },
-          });
+          const product =
+            await productRepository.findOne({
+              where: {
+                id: item.productId,
+              },
+              lock: {
+                mode: 'pessimistic_write',
+              },
+            });
 
           if (!product) {
             throw new NotFoundException(
@@ -232,7 +292,10 @@ export class ChallansService {
             );
           }
 
-          if (product.currentStock < item.quantity) {
+          if (
+            product.currentStock <
+            item.quantity
+          ) {
             throw new BadRequestException(
               `Insufficient stock for ${product.productName}. Available: ${product.currentStock}, requested: ${item.quantity}`,
             );
@@ -243,20 +306,52 @@ export class ChallansService {
 
         /*
          * All stock checks passed.
-         * Now reduce stock.
+         *
+         * Reduce stock and create an OUT
+         * stock movement for every product.
          */
-        for (let i = 0; i < productsToUpdate.length; i++) {
-          const product = productsToUpdate[i];
-          const item = challan.products[i];
+        for (
+          let i = 0;
+          i < productsToUpdate.length;
+          i++
+        ) {
+          const product =
+            productsToUpdate[i];
 
-          product.currentStock -= item.quantity;
+          const item =
+            challan.products[i];
 
-          await productRepository.save(product);
+          product.currentStock -=
+            item.quantity;
+
+          await productRepository.save(
+            product,
+          );
+
+          const movement =
+            stockMovementRepository.create({
+              productId: product.id,
+              quantity: item.quantity,
+              movementType: MovementType.OUT,
+              reason: `Sales Challan ${challan.challanNumber}`,
+              createdBy: challan.createdBy,
+            });
+
+          await stockMovementRepository.save(
+            movement,
+          );
         }
 
-        challan.status = ChallanStatus.CONFIRMED;
+        /*
+         * All stock updates and movement
+         * records succeeded.
+         */
+        challan.status =
+          ChallanStatus.CONFIRMED;
 
-        return challanRepository.save(challan);
+        return challanRepository.save(
+          challan,
+        );
       },
     );
   }
@@ -271,9 +366,10 @@ export class ChallansService {
         date.getDate(),
       ).padStart(2, '0')}`;
 
-    const timePart = Date.now()
-      .toString()
-      .slice(-8);
+    const timePart =
+      Date.now()
+        .toString()
+        .slice(-8);
 
     return `CH-${datePart}-${timePart}`;
   }

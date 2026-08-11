@@ -20,19 +20,22 @@ import { ChallansModule } from './challans/challans.module';
     }),
 
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST'),
-        port: Number(config.get('DB_PORT')),
-        username: config.get('DB_USERNAME'),
-        password: config.get('DB_PASSWORD'),
-        database: config.get('DB_DATABASE'),
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
-    }),
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (config: ConfigService) => ({
+    type: 'postgres',
+    host: config.get<string>('DB_HOST'),
+    port: Number(config.get<string>('DB_PORT', '5432')),
+    username: config.get<string>('DB_USERNAME'),
+    password: config.get<string>('DB_PASSWORD'),
+    database: config.get<string>('DB_DATABASE'),
+
+    autoLoadEntities: true,
+
+    synchronize:
+      config.get<string>('DB_SYNCHRONIZE') === 'true',
+  }),
+}),
 
     AuthModule,
     UsersModule,

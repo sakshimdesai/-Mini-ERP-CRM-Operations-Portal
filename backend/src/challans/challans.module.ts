@@ -7,6 +7,7 @@ import { Challan } from './challans.entity';
 
 import { Customer } from '../customers/customer.entity';
 import { Product } from '../products/products.entity';
+import { StockMovement } from '../stock-movements/stock-movements.entity';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { Product } from '../products/products.entity';
       Challan,
       Customer,
       Product,
+      StockMovement,
     ]),
   ],
   controllers: [ChallansController],

@@ -6,7 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RolesGuard } from './guards/roles/roles.guard';
 
 @Module({
@@ -14,17 +14,27 @@ import { RolesGuard } from './guards/roles/roles.guard';
     PassportModule,
     ConfigModule,
     UsersModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'mini_erp_secret_key',
-      signOptions: {
-        expiresIn: '1d',
-      },
+
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: '1d',
+        },
+      }),
     }),
   ],
+
   controllers: [AuthController],
-  providers: [AuthService,
+
+  providers: [
+    AuthService,
     JwtStrategy,
-    RolesGuard],
+    RolesGuard,
+  ],
+
   exports: [JwtModule],
 })
 export class AuthModule {}

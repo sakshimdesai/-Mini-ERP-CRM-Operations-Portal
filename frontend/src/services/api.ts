@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function apiRequest<T>(
   endpoint: string,
@@ -11,13 +11,19 @@ export async function apiRequest<T>(
   headers.set('Content-Type', 'application/json');
 
   if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+    headers.set(
+      'Authorization',
+      `Bearer ${token}`,
+    );
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(
+    `${API_BASE_URL}${endpoint}`,
+    {
+      ...options,
+      headers,
+    },
+  );
 
   const data = await response.json().catch(() => null);
 
@@ -28,7 +34,9 @@ export async function apiRequest<T>(
       `Request failed with status ${response.status}`;
 
     throw new Error(
-      Array.isArray(message) ? message.join(', ') : message,
+      Array.isArray(message)
+        ? message.join(', ')
+        : message,
     );
   }
 
