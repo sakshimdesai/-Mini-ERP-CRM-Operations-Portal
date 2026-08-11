@@ -1,11 +1,22 @@
 import { useState } from 'react';
 import Login from './pages/Login';
+import Customers from './pages/Customers';
+import Products from './pages/Products';
+import Inventory from './pages/Inventory';
+import Challans from './pages/Challans';
 import './index.css';
 
 interface User {
   username: string;
   role: string;
 }
+
+type ActivePage =
+  | 'dashboard'
+  | 'customers'
+  | 'products'
+  | 'inventory'
+  | 'challans';
 
 function App() {
   const [user, setUser] = useState<User | null>(() => {
@@ -22,81 +33,127 @@ function App() {
     }
   });
 
+  const [activePage, setActivePage] =
+    useState<ActivePage>('dashboard');
+
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+
     setUser(null);
+    setActivePage('dashboard');
   }
 
   if (!user) {
     return <Login onLogin={setUser} />;
   }
 
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="brand-icon">ERP</div>
-          <div>
-            <strong>Mini ERP</strong>
-            <span>Operations Portal</span>
-          </div>
-        </div>
+  /*
+   * TypeScript does not preserve the null check for `user`
+   * inside the nested renderPage function.
+   *
+   * Since we already returned above when user is null,
+   * currentUser is guaranteed to be a valid User here.
+   */
+  const currentUser = user;
 
-        <nav>
-          <button className="nav-item active">
-            <span>▦</span>
-            Dashboard
-          </button>
-
-          <button className="nav-item">
-            <span>♙</span>
-            Customers
-          </button>
-
-          <button className="nav-item">
-            <span>□</span>
-            Products
-          </button>
-
-          <button className="nav-item">
-            <span>◫</span>
-            Inventory
-          </button>
-
-          <button className="nav-item">
-            <span>▤</span>
-            Sales Challans
-          </button>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="user-info">
-            <div className="avatar">
-              {user.username.charAt(0).toUpperCase()}
-            </div>
-
+  function renderPage() {
+    if (activePage === 'customers') {
+      return (
+        <>
+          <header className="topbar">
             <div>
-              <strong>{user.username}</strong>
-              <span>{user.role}</span>
+              <h1>Customers</h1>
+              <p>
+                Manage your customer relationships
+              </p>
             </div>
-          </div>
 
-          <button className="logout-button" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </aside>
+            <div className="role-badge">
+              {currentUser.role}
+            </div>
+          </header>
 
-      <main className="main-content">
+          <Customers />
+        </>
+      );
+    }
+
+    if (activePage === 'products') {
+      return (
+        <>
+          <header className="topbar">
+            <div>
+              <h1>Products</h1>
+              <p>
+                Manage your product catalogue
+              </p>
+            </div>
+
+            <div className="role-badge">
+              {currentUser.role}
+            </div>
+          </header>
+
+          <Products />
+        </>
+      );
+    }
+
+    if (activePage === 'inventory') {
+      return (
+        <>
+          <header className="topbar">
+            <div>
+              <h1>Inventory</h1>
+              <p>
+                Monitor stock levels and movements
+              </p>
+            </div>
+
+            <div className="role-badge">
+              {currentUser.role}
+            </div>
+          </header>
+
+          <Inventory />
+        </>
+      );
+    }
+
+    if (activePage === 'challans') {
+      return (
+        <>
+          <header className="topbar">
+            <div>
+              <h1>Sales Challans</h1>
+              <p>
+                Create and manage sales challans
+              </p>
+            </div>
+
+            <div className="role-badge">
+              {currentUser.role}
+            </div>
+          </header>
+
+          <Challans />
+        </>
+      );
+    }
+
+    return (
+      <>
         <header className="topbar">
           <div>
             <h1>Dashboard</h1>
-            <p>Overview of your ERP operations</p>
+            <p>
+              Overview of your ERP operations
+            </p>
           </div>
 
           <div className="role-badge">
-            {user.role}
+            {currentUser.role}
           </div>
         </header>
 
@@ -128,13 +185,137 @@ function App() {
 
         <section className="welcome-card">
           <div>
-            <h2>Welcome, {user.username} 👋</h2>
+            <h2>
+              Welcome, {currentUser.username} 👋
+            </h2>
+
             <p>
-              Use the navigation menu to manage customers, products,
-              inventory and sales challans.
+              Use the navigation menu to manage
+              customers, products, inventory and sales
+              challans.
             </p>
           </div>
         </section>
+      </>
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            ERP
+          </div>
+
+          <div>
+            <strong>Mini ERP</strong>
+            <span>Operations Portal</span>
+          </div>
+        </div>
+
+        <nav>
+          <button
+            className={`nav-item ${
+              activePage === 'dashboard'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              setActivePage('dashboard')
+            }
+          >
+            <span>▦</span>
+            Dashboard
+          </button>
+
+          <button
+            className={`nav-item ${
+              activePage === 'customers'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              setActivePage('customers')
+            }
+          >
+            <span>♙</span>
+            Customers
+          </button>
+
+          <button
+            className={`nav-item ${
+              activePage === 'products'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              setActivePage('products')
+            }
+          >
+            <span>□</span>
+            Products
+          </button>
+
+          <button
+            className={`nav-item ${
+              activePage === 'inventory'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              setActivePage('inventory')
+            }
+          >
+            <span>◫</span>
+            Inventory
+          </button>
+
+          <button
+            className={`nav-item ${
+              activePage === 'challans'
+                ? 'active'
+                : ''
+            }`}
+            onClick={() =>
+              setActivePage('challans')
+            }
+          >
+            <span>▤</span>
+            Sales Challans
+          </button>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="user-info">
+            <div className="avatar">
+              {currentUser.username
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+
+            <div>
+              <strong>
+                {currentUser.username}
+              </strong>
+
+              <span>
+                {currentUser.role}
+              </span>
+            </div>
+          </div>
+
+          <button
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        {renderPage()}
       </main>
     </div>
   );
