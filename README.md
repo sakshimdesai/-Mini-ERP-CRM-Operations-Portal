@@ -541,7 +541,7 @@ The following test accounts are available for evaluation:
 
 | Role      | Username  | Password      |
 | --------- | --------- | ------------- |
-| Admin     | admin     | admin         |
+| Admin     | admin     | Admin@123     |
 | Sales     | sales     | Sales@123     |
 | Warehouse | warehouse | Warehouse@123 |
 | Accounts  | accounts  | Accounts@123  |
